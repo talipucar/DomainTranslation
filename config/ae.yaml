@@ -1,0 +1,33 @@
+---
+model_mode: ae                    # Model to use. ae:Autoencoder, aae:Adversarial AE, vae: Variational AE, bvae: Beta VAE
+joint_training_mode: sl           # Framework to use when aligning latent space of two AE-based models. aae: Adversarial, sl:Supervised Learning
+convolution: true                 # Set true if you want to use CNN-based architecture. Else, it will use fully-connected layers.
+supervised: true                  # Set true if you want to use a classifier when training the autoencoder model
+dims:                             # Autoencoder architecture - This is for Encoder, and Decoder is symmetric to Encoder
+  - 7633                          # Input dimension = number of features in the dataset
+  - 1024
+  - 512
+  - 128                           # Bottleneck layer
+conv_dims:                        # Architecture for Encoder with convolutional layers
+  - [ 1,  64, 4, 2, 1, 1]         # i=input channel, o=output channel, k = kernel, s = stride, p = padding, d = dilation
+  - [64,  64, 4, 2, 1, 1]         # [i, o, k, s, p, d]
+  - [64, 128, 4, 2, 1, 1]         # [i, o, k, s, p, d]
+  - [128, 256, 4, 2, 1, 1]        # [i, o, k, s, p, d]
+  - 128                           # Dimension of bottleneck layer
+conditional_dim: 0
+beta: 1.0                         # Factor used for Beta-VAE model (Beta >1). Use <1 for better reconstruction/clustering
+stddev: 1.0                       # Stddev used for sampling during re-parameterization in AE
+normalize: true                   # If True, we do L2 normalization on latent variable
+p_norm: 2                         # p-value used for normalization. p=2 for L2 norm, p=1 for L1 norm and so on.
+lamda: 10                         # Scaler for Classification loss i.e. lamda * cross_entropy_loss
+output_dim: 2                     # Classifier output dimension. For binary classification, use 2.
+isBatchNorm: false                # Set True to use BatchNorm layer
+isDropout: true                   # Set True to use Dropout layer
+dropout_rate: 0.2                 # Set dropout rate if Dropout is being used
+tau: 0.1                          # temperature parameter used in NTXentLoss
+learning_rate: 0.001              # Learning rate for training
+epochs: 10                       # Number of epochs to use for training
+batch_size: 32                    # Set batch size
+nth_epoch: 5                      # Compute validation loss in every nth_epoch
+pretrain: true                    # Set true if AE needs to be pre-trained before doing joint training with classifier.
+tune_model: false                 # Set true if you want to pre-tune an already trained model.
