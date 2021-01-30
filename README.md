@@ -1,4 +1,4 @@
-# PyFlow_SimCLR: 
+# PyFlow_DomainTranslation: 
 ##### Author: Talip Ucar (ucabtuc@gmail.com)
 
 Pytorch implementation of "Multi-domain translation between single-cell imaging and sequencing data using 
@@ -168,9 +168,11 @@ First two plots below are showing samples of images and RNA data in their respec
 clusters in each domain. Each figure the left and right sub-plots are obtained using PCA, and T-SNE respectively.
 
 ![IMG](./assets/img_inLatentSpace.png)
+
 Figure-1: Image samples in the latent space of Image Autoencoder
 
 ![RNA](./assets/rna_inLatentSpace.png)
+
 Figure-2: RNA samples in the latent space of RNA Autoencoder
 
 
@@ -182,6 +184,7 @@ Image data &#x27F9; Image Encoder &#x27F9; RNA Decoder &#x27F9; RNA Encoder &#x2
 </pre>
 
 ![IMG_RNA](./assets/bothDomains_inRNALatentSpace.png)
+
 Figure-3: The samples from RNA and Image domain are shown in the latent space of RNA Autoencoder. Legends (0,1) correspond 
 to two clusters in the Image domain, and (2, 3) are for the ones in the RNA domain. Mapping of clusters are: 0 &#x27F9; 2, 1 &#x27F9; 3
 
