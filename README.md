@@ -241,5 +241,20 @@ III) python 2_eval.py          # Evaluations to test how aligned two domains are
 If you want to use Python 3.7, please follow the steps described in [Important Note](#important-note).
 
 # Citing this repo
-If you use this work in your own studies, and work, please don't forget to cite the original source.
+If you use this work in your own studies, and work, you can cite it by using the following:
+```
+@misc{talip_ucar_2021_4482793,
+    author       = {Talip Ucar},
+    title        = {{Domain translation between single-cell imaging and sequencing data using autoencoders}},
+    month        = Jan,
+    year         = 2021,
+    doi          = {10.5281/zenodo.4482793},
+    version      = {1.0},
+    publisher    = {Zenodo},
+    url          = {https://doi.org/10.5281/zenodo.4482793}
+    }
+```
+
+[![DOI](https://zenodo.org/badge/334516979.svg)](https://zenodo.org/badge/latestdoi/334516979)
+
 
