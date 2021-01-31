@@ -92,6 +92,17 @@ pipenv shell                # To activate virtual env
 pipenv install --skip-lock  # To install required packages. 
 ```
 
+#### Important Note: 
+If you want to use Python 3.7, follow these steps:
+- Change python_version in Pipfile: ```python_version = "3.7"``` 
+- Comment out torch and torchvision in Pipfile
+- Install the packages as described above in 3 steps.
+- Pip install torch and torchvision using following command line:
+```pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html```
+
+You need to use this version of torch and torchvision if you want to use GPU when training. Other versions of torch with Python 3.7 
+is not able to detect GPU even if it is available.
+
 # Training
 The training is done in two steps. 
 
@@ -206,13 +217,10 @@ Mapping of clusters are: 0 &#x27F9; 2, 1 &#x27F9; 3
 MLFlow can be used to track experiments. It is turned off by default, but can be turned on by changing option in 
 runtime config file in "./config/runtime.yaml"
 
-#Summary
+# Summary
 1) Data and pre-trained models are zipped and attached in the Github release. 
 After cloning the project, download the data (and the models if you would like) 
-from : [Github release](https://github.com/talipucar/PyFlow_DomainTranslation/releases) 
-
-Once downloaded, unzip the data, and place it under the main project directory. 
-Unzipped model should be placed under "./results/training/ae/"
+from : [Github release](https://github.com/talipucar/PyFlow_DomainTranslation/releases). Once downloaded, unzip the data, and place it under the main project directory. Unzipped model should be placed under "./results/training/ae/"
 
 
 2) Installation of required packages:
@@ -229,6 +237,8 @@ pipenv install --skip-lock  # To install required packages.
                                # with pre-trained Image autoencoder in (I) to align two domains.
 III) python 2_eval.py          # Evaluations to test how aligned two domains are.
 ```
+
+If you want to use Python 3.7, please follow the steps described in [Important Note](#important-note).
 
 # Citing this repo
 If you use this work in your own studies, and work, please don't forget to cite the original source.
