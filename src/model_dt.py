@@ -35,6 +35,7 @@ from src.model import AEModel
 
 import torch as th
 import torch.nn.functional as F
+
 th.autograd.set_detect_anomaly(True)
 
 
@@ -123,7 +124,8 @@ class DTModel:
         # Cross-entropy loss
         self.xloss = th.nn.CrossEntropyLoss(weight=self.ce_weights, reduction='mean')
         # Set optimizer for classifier
-        self.optimizer_cl = self._adam([self.classifier_dt.parameters(), self.autoencoder_rna.encoder.parameters()], lr=self.options["learning_rate"])
+        self.optimizer_cl = self._adam([self.classifier_dt.parameters(), self.autoencoder_rna.encoder.parameters()],
+                                       lr=self.options["learning_rate"])
         # Add items to summary to be used for reporting later
         self.summary.update({"class_train_acc": [], "class_test_acc": []})
 
@@ -166,7 +168,8 @@ class DTModel:
         # Training and Validation set for RNA dataset
         train_loader_rna, validation_loader_rna = rna_loader.train_loader, rna_loader.test_loader
         # Placeholders for record batch losses
-        self.loss = {"rloss_b": [], "kl_loss": [], "closs_b": [], "rloss_e": [], "closs_e": [], "vloss_e": [], "aae_loss": []}
+        self.loss = {"rloss_b": [], "kl_loss": [], "closs_b": [], "rloss_e": [], "closs_e": [], "vloss_e": [],
+                     "aae_loss": []}
         # Placeholder for classifier accuracy
         self.acc = {"acc_e": [], "acc_b": []}
         # Turn on training mode for each model.
@@ -186,7 +189,8 @@ class DTModel:
                 # Process the batch i.e. turning it into a tensor
                 Ximg, Xrna = img_dict['tensor'].to(self.device), rna_dict['tensor'].to(self.device)
                 # Get labels
-                labels_img, labels_rna = img_dict["binary_label"].to(self.device), rna_dict["binary_label"].to(self.device)
+                labels_img, labels_rna = img_dict["binary_label"].to(self.device), rna_dict["binary_label"].to(
+                    self.device)
                 # Forward pass on Img Autoencoder
                 with th.no_grad():
                     _, latent_img, _, _ = self.autoencoder(Ximg)
@@ -203,8 +207,9 @@ class DTModel:
                 # Update Autoencoder params
                 self._update_model(total_loss, self.optimizer_rna, retain_graph=True)
                 # Update generator (Encoder) and discriminator if we are using Adversarial AE
-                if self.options["model_mode"] == "aae":
-                    disc_loss, gen_loss = self.update_generator_discriminator([latent_img, Xrna, labels_img, labels_rna])
+                if self.options["joint_training_mode"] == "aae":
+                    disc_loss, gen_loss = self.update_generator_discriminator(
+                        [latent_img, Xrna, labels_img, labels_rna])
                     self.loss["aae_loss"].append([disc_loss, gen_loss])
                     del disc_loss, gen_loss
                 # Update Classifier if it is being used
@@ -214,17 +219,21 @@ class DTModel:
                     # Forward pass on Classifier
                     preds_img, preds_rna = self.classifier_dt(latent_img), self.classifier_dt(latent_rna)
                     # Compute loss
-                    xloss = 0.5*self.xloss(preds_img, labels_img) + 0.5*self.xloss(preds_rna, labels_rna)
-                    # Record cross-entropy loss
-                    self.loss["closs_b"].append(xloss.item())
-                    # Compute mean accuracy for imaging
-                    acc = 0.5*(th.argmax(preds_img, dim=1) == labels_img).float().mean()
-                    # Compute mean accuracy for RNA
-                    acc += 0.5*(th.argmax(preds_rna, dim=1) == labels_rna).float().mean()
-                    # Record accuracy
-                    self.acc["acc_b"].append(acc)
+                    xloss = 0.5 * self.xloss(preds_img, labels_img) + 0.5 * self.xloss(preds_rna, labels_rna)
                     # Update Classifier params
                     self._update_model(xloss, self.optimizer_cl, retain_graph=False)
+                    # Compute mean accuracy for imaging
+                    acc = 0.5 * (th.argmax(preds_img, dim=1) == labels_img).float().mean()
+                    # Compute mean accuracy for RNA
+                    acc += 0.5 * (th.argmax(preds_rna, dim=1) == labels_rna).float().mean()
+                    # Record accuracy
+                    self.acc["acc_b"].append(acc)
+                    # Get accuracy per epoch
+                    self.acc["acc_e"].append(sum(self.acc["acc_b"][-self.total_batches:-1]) / self.total_batches)
+                    # Record cross-entropy loss
+                    self.loss["closs_b"].append(xloss.item())
+                    # Get cross-entropy loss for training per epoch
+                    self.loss["closs_e"].append(sum(self.loss["closs_b"][-self.total_batches:-1]) / self.total_batches)
                     # Clean-up for efficient memory use.
                     del xloss, preds_img, preds_rna, labels_img, labels_rna, acc
                 # Update log message using epoch and batch numbers
@@ -233,11 +242,7 @@ class DTModel:
                 del recon_rna_loss, total_loss, kl_loss, recon_rna, latent_rna, mean_rna, logvar_rna
                 gc.collect()
             # Get reconstruction loss for training per epoch
-            self.loss["rloss_e"].append(sum(self.loss["rloss_b"][-self.total_batches:-1])/self.total_batches)
-            # Get cross-entropy loss for training per epoch
-            self.loss["closs_e"].append(sum(self.loss["closs_b"][-self.total_batches:-1])/self.total_batches)
-            # Get accuracy per epoch
-            self.acc["acc_e"].append(sum(self.acc["acc_b"][-self.total_batches:-1])/self.total_batches)
+            self.loss["rloss_e"].append(sum(self.loss["rloss_b"][-self.total_batches:-1]) / self.total_batches)
             # Validate every nth epoch. n=1 by default
             _ = self.validate(validation_loader_rna) if epoch % self.options["nth_epoch"] == 0 else None
         # Save plot of training and validation losses
@@ -280,7 +285,7 @@ class DTModel:
             # Turn on training mode
             self.set_mode(mode="training")
             # Compute mean validation loss
-            vloss = vloss/total_batches
+            vloss = vloss / total_batches
             # Record the loss
             self.loss["vloss_e"].append(vloss)
             # Return mean validation loss
@@ -293,14 +298,14 @@ class DTModel:
         latent_real = latent_img
         # Normalize the noise if samples from posterior (i.e. latent variable) is also normalized.
         latent_real = F.normalize(latent_real, p=2, dim=1) if self.options["normalize"] else latent_real
-        #----  Start of Discriminator update: Autoencoder in evaluation mode
+        # ----  Start of Discriminator update: Autoencoder in evaluation mode
         self.autoencoder_rna.eval()
         # Forward pass on Autoencoder
         _, latent_fake, _, _ = self.autoencoder_rna(Xrna)
         # Concatenate labels of image data (repeated 10 times) to its corresponding embedding (i.e. conditional)
-        latent_real = th.cat((latent_real, labels_img.float().view(-1,1).expand(-1,10)), dim=1)
+        latent_real = th.cat((latent_real, labels_img.float().view(-1, 1).expand(-1, 10)), dim=1)
         # Concatenate labels of RNA data (repeated 10 times) to its corresponding embedding (i.e. conditional)
-        latent_fake = th.cat((latent_fake, labels_rna.float().view(-1,1).expand(-1, 10)), dim=1)
+        latent_fake = th.cat((latent_fake, labels_rna.float().view(-1, 1).expand(-1, 10)), dim=1)
         # Get predictions for real samples
         pred_fake = self.discriminator(latent_fake.detach())
         # Get predictions for fake samples
@@ -313,14 +318,14 @@ class DTModel:
         disc_loss.backward(retain_graph=retain_graph)
         # Update parameters of discriminator
         self.optimizer_disc.step()
-        #---- Start of Generator update: Autoencoder in train mode
+        # ---- Start of Generator update: Autoencoder in train mode
         self.autoencoder_rna.encoder.train()
         # Discriminator in evaluation mode
         self.discriminator.eval()
         #  Forward pass on Autoencoder
         _, latent_fake, _, _ = self.autoencoder_rna(Xrna)
         # Concatenate labels of RNA data (repeated 10 times) to its corresponding embedding (i.e. conditional)
-        latent_fake = th.cat((latent_fake, labels_rna.float().view(-1,1).expand(-1, 10)), dim=1)
+        latent_fake = th.cat((latent_fake, labels_rna.float().view(-1, 1).expand(-1, 10)), dim=1)
         # Get predictions for real samples
         pred_fake = self.discriminator(latent_fake)
         # Compute discriminator loss
@@ -337,21 +342,20 @@ class DTModel:
         # Return losses
         return disc_loss.item(), gen_loss.item()
 
-
     def update_log(self, epoch, batch):
         # For the first epoch, add losses for batches since we still don't have loss for the epoch
         if epoch < 1:
-            description = f"Epoch:[{epoch-1}], Batch:[{batch}], Recon. loss:{self.loss['rloss_b'][-1]:.4f}"
+            description = f"Epoch:[{epoch - 1}], Batch:[{batch}], Recon. loss:{self.loss['rloss_b'][-1]:.4f}"
             if self.options["supervised"]:
                 description += f", CE loss:{self.loss['closs_b'][-1]:.4f}, Accuracy:{self.acc['acc_b'][-1]:.4f}"
-            if self.options["model_mode"] == "aae":
+            if self.options["joint_training_mode"] == "aae":
                 description += f", Disc loss:{self.loss['aae_loss'][-1][0]:.4f}, Gen:{self.loss['aae_loss'][-1][1]:.4f}"
         # For sub-sequent epochs, display only epoch losses.
         else:
-            description = f"Epoch:[{epoch-1}] training loss:{self.loss['rloss_e'][-1]:.4f}, val loss:{self.loss['vloss_e'][-1]:.4f}"
+            description = f"Epoch:[{epoch - 1}] training loss:{self.loss['rloss_e'][-1]:.4f}, val loss:{self.loss['vloss_e'][-1]:.4f}"
             if self.options["supervised"]:
                 description += f" , CE loss:{self.loss['closs_e'][-1]:.4f}, Accuracy:{self.acc['acc_e'][-1]:.4f}"
-            if self.options["model_mode"] == "aae":
+            if self.options["joint_training_mode"] == "aae":
                 description += f", Disc loss:{self.loss['aae_loss'][-1][0]:.4f}, Gen:{self.loss['aae_loss'][-1][1]:.4f}"
         # Update the displayed message
         self.train_tqdm.set_description(description)
@@ -360,11 +364,11 @@ class DTModel:
         if mode == "training":
             self.autoencoder_rna.train()
             self.classifier_dt.train() if self.options["supervised"] else None
-            self.discriminator.train() if self.options["model_mode"]=="aae" else None
+            self.discriminator.train() if self.options["joint_training_mode"] == "aae" else None
         else:
             self.autoencoder_rna.eval()
             self.classifier_dt.eval() if self.options["supervised"] else None
-            self.discriminator.eval() if self.options["model_mode"]=="aae" else None
+            self.discriminator.eval() if self.options["joint_training_mode"] == "aae" else None
 
     def save_weights(self):
         """
@@ -386,25 +390,25 @@ class DTModel:
             setattr(self, model_name, model.eval())
             print(f"--{model_name} is loaded")
         print("Done with loading models.")
-            
+
     def print_model_summary(self):
         """
         :return: None
         Sanity check to see if the models are constructed correctly.
         """
         # Summary of the model
-        description  = f"{40*'-'}Summarize models:{40*'-'}\n"
-        description += f"{34*'='}{self.options['model_mode'].upper().replace('_', ' ')} Model{34*'='}\n"
+        description = f"{40 * '-'}Summarize models (Autoencoder for RNA-seq and Discriminator/Classifier for Joint Training):{40 * '-'}\n"
+        description += f"{34 * '='}{self.options['model_mode'].upper().replace('_', ' ')} Model{34 * '='}\n"
         description += f"{self.autoencoder_rna}\n"
         # Summary of Classifier if it is being used
         if self.options["supervised"]:
-            description += f"{30*'='} Classifier {30*'='}\n"
-            description += f"{self.classifier_dt}\n" 
-        # Summary of Discriminator if the model is based on Adversarial AE
-        if self.options["model_mode"]=="aae":
-            description += f"{30*'='} Discriminator {30*'='}\n"
-            description += f"{self.discriminator}\n" 
-         # Print model architecture
+            description += f"{30 * '='} Classifier {30 * '='}\n"
+            description += f"{self.classifier_dt}\n"
+            # Summary of Discriminator if the model is based on Adversarial AE
+        if self.options["joint_training_mode"] == "aae":
+            description += f"{30 * '='} Discriminator {30 * '='}\n"
+            description += f"{self.discriminator}\n"
+            # Print model architecture
         print(description)
 
     def _update_model(self, loss, optimizer, retain_graph=True):

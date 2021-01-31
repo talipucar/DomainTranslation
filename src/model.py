@@ -248,7 +248,7 @@ class AEModel:
 
         data2 = b + eps
         data2 = th.from_numpy(data2).float()
-        return data2  
+        return data2
 
     def validate(self, validation_loader):
         with th.no_grad():
@@ -345,7 +345,6 @@ class AEModel:
         :return: None
         Used to load weights saved at the end of the training.
         """
-        print(self.model_dict)
         for model_name in self.model_dict:
             model = th.load(self._model_path + "/" + model_name + ".pt", map_location=self.device)
             setattr(self, model_name, model.eval())
@@ -358,7 +357,7 @@ class AEModel:
         Sanity check to see if the models are constructed correctly.
         """
         # Summary of the model
-        description  = f"{40*'-'}Summarize models:{40*'-'}\n"
+        description  = f"{40*'-'}Summarize models used for Image Domain:{40*'-'}\n"
         description += f"{34*'='}{self.options['model_mode'].upper().replace('_', ' ')} Model{34*'='}\n"
         description += f"{self.autoencoder}\n"
         # Summary of Classifier if it is being used
