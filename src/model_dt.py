@@ -2,7 +2,22 @@
 Author: Talip Ucar
 Email: ucabtuc@gmail.com
 Version: 0.1
-Description: Class to train an Autoencoder using the RNA sequence data.
+Description: Class to train an Autoencoder using the RNA sequence data and to align the latent representations
+of two modalities (Chromatin Images and RNA-seq data).
+
+The pre-trained CNN-based AE is loaded, and a fully-connected AE is initialized together with a discriminator, or
+classifier. The fully-connected AE is trained using either adversarial, or cross-entropy loss, during which its latent
+space is aligned with that of CNN-based AE, which was pre-trained on the chromatin images.
+
+Two choices to align the latent representations:
+    I) A discriminator that can be used to compare samples from the latent layers of two Autoencoders, and align
+    corresponding clusters of two domain in latent space. It is a four layer fully-connected neural network with
+    128 hidden dimensions in each layer, which can be change under "utils>model_utils.py"
+
+    II) A classifier that can be trained on samples from the latent layers of two Autoencoders, and align corresponding
+    clusters of two domain in latent space. It is a four layer fully-connected neural network with 128 hidden dimensions
+    in each layer, which can be change under "utils>model_utils.py"
+
 """
 
 import os
@@ -25,8 +40,21 @@ th.autograd.set_detect_anomaly(True)
 
 class DTModel:
     """
-    Model:
-    Loss function:
+    Model: Consists of two Autoencoders together with either Discriminator, or Classifier.
+    Loss function: Reconstruction loss of untrained Autoencoder + either Adversarial or Cross-entropy loss.
+    ------------------------------------------------------------
+    Architecture:  Encoder -> Decoder
+                             -> Discriminator, or Classifier
+                   Encoder -> Decoder
+    ------------------------------------------------------------
+    Autoencoders can be configured as
+                        - Autoencoder (ae),
+                        - Variational autoencoder (vae),
+                        - Beta-VAE (bvae),
+                        - Adversarial autoencoder (aae).
+    ------------------------------------------------------------
+    By default, the joint training is done by using adversarial loss. To change it to cross-entropy loss, change
+    "joint_training_mode: aae" to "joint_training_mode: sl" in "./config/ae.yaml".
     """
 
     def __init__(self, options):
@@ -48,7 +76,7 @@ class DTModel:
         # Set random seed
         set_seed(self.options)
         # Set paths for results and Initialize some arrays to collect data during training
-        self.set_paths()
+        self._set_paths()
         # Set directories i.e. create ones that are missing.
         set_dirs(self.options)
         # ------Network---------
@@ -65,7 +93,7 @@ class DTModel:
         # Instantiate and set up Classifier if "supervised" i.e. loss, optimizer, device (GPU, or CPU)
         self.set_classifier_dt() if self.options["supervised"] else None
         # Set scheduler (its use is optional)
-        self.set_scheduler()
+        self._set_scheduler()
         # Print out model architecture
         self.print_model_summary()
 
@@ -173,7 +201,7 @@ class DTModel:
                 # Record KL loss if we are using variational inference
                 self.loss["kl_loss"] += [kl_loss.item()] if self.options["model_mode"] in ["vae", "bvae"] else []
                 # Update Autoencoder params
-                self.update_model(total_loss, self.optimizer_rna, retain_graph=True)
+                self._update_model(total_loss, self.optimizer_rna, retain_graph=True)
                 # Update generator (Encoder) and discriminator if we are using Adversarial AE
                 if self.options["model_mode"] == "aae":
                     disc_loss, gen_loss = self.update_generator_discriminator([latent_img, Xrna, labels_img, labels_rna])
@@ -196,7 +224,7 @@ class DTModel:
                     # Record accuracy
                     self.acc["acc_b"].append(acc)
                     # Update Classifier params
-                    self.update_model(xloss, self.optimizer_cl, retain_graph=False)
+                    self._update_model(xloss, self.optimizer_cl, retain_graph=False)
                     # Clean-up for efficient memory use.
                     del xloss, preds_img, preds_rna, labels_img, labels_rna, acc
                 # Update log message using epoch and batch numbers
@@ -257,7 +285,6 @@ class DTModel:
             self.loss["vloss_e"].append(vloss)
             # Return mean validation loss
         return vloss
-
 
     def update_generator_discriminator(self, data, retain_graph=True):
         # Get the data
@@ -339,7 +366,6 @@ class DTModel:
             self.classifier_dt.eval() if self.options["supervised"] else None
             self.discriminator.eval() if self.options["model_mode"]=="aae" else None
 
-            
     def save_weights(self):
         """
         :return: None
@@ -381,7 +407,7 @@ class DTModel:
          # Print model architecture
         print(description)
 
-    def update_model(self, loss, optimizer, retain_graph=True):
+    def _update_model(self, loss, optimizer, retain_graph=True):
         # Reset optimizer
         optimizer.zero_grad()
         # Backward propagation to compute gradients
@@ -389,11 +415,11 @@ class DTModel:
         # Update weights
         optimizer.step()
 
-    def set_scheduler(self):
+    def _set_scheduler(self):
         # Set scheduler (Its use will be optional)
         self.scheduler = th.optim.lr_scheduler.StepLR(self.optimizer_rna, step_size=2, gamma=0.99)
 
-    def set_paths(self):
+    def _set_paths(self):
         """ Sets paths to bse used for saving results at the end of the training"""
         # Top results directory
         self._results_path = self.options["paths"]["results"]

@@ -1,6 +1,6 @@
 ---
 model_mode: ae                    # Model to use. ae:Autoencoder, aae:Adversarial AE, vae: Variational AE, bvae: Beta VAE
-joint_training_mode: sl           # Framework to use when aligning latent space of two AE-based models. aae: Adversarial, sl:Supervised Learning
+joint_training_mode: aae          # Framework to use when aligning latent space of two AE-based models. aae: Adversarial, sl:Supervised Learning
 convolution: true                 # Set true if you want to use CNN-based architecture. Else, it will use fully-connected layers.
 supervised: true                  # Set true if you want to use a classifier when training the autoencoder model
 dims:                             # Autoencoder architecture - This is for Encoder, and Decoder is symmetric to Encoder
@@ -26,8 +26,7 @@ isDropout: true                   # Set True to use Dropout layer
 dropout_rate: 0.2                 # Set dropout rate if Dropout is being used
 tau: 0.1                          # temperature parameter used in NTXentLoss
 learning_rate: 0.001              # Learning rate for training
-epochs: 10                       # Number of epochs to use for training
+epochs: 500                       # Number of epochs to use for training
 batch_size: 32                    # Set batch size
 nth_epoch: 5                      # Compute validation loss in every nth_epoch
 pretrain: true                    # Set true if AE needs to be pre-trained before doing joint training with classifier.
-tune_model: false                 # Set true if you want to pre-tune an already trained model.

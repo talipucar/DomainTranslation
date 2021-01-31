@@ -1,12 +1,19 @@
-# PyFlow_SimCLR: 
+# PyFlow_DomainTranslation: 
 ##### Author: Talip Ucar (ucabtuc@gmail.com)
 
 Pytorch implementation of "Multi-domain translation between single-cell imaging and sequencing data using 
 autoencoders" (https://www.nature.com/articles/s41467-020-20249-2) with custom models. 
-Two autoencoders learn the representation of two modalities (one autoencoder per modallity). 
-And either a Discriminator with adversarial loss, or a classifier with cross-entropy loss is used to 
-align the latent space of two modalities to learn a common latent representation. This enables us to 
-translate data from one domain to another, or fill in the missing datas in one modality by unsing the available data in another.
+Two autoencoders are trained to learn a shared latent representation between two modalities (Chromatin Images and 
+Single-cell RNA sequence). 
+
+Each autoencoder is trained to learn representation of one modality while either a Discriminator with adversarial loss, 
+or a classifier with cross-entropy loss is trained on the samples in the latent space to align the latent representations 
+of two modalities. This results in learning a common latent representation for both modalities. 
+
+Once trained, we can translate data from one domain to another, or fill in the missing data in one modality 
+by using the available data in another.
+
+If you are in hurry, and just want to clone the project and run it, move to [Summary](#summary) section. Otherwise, read on...
 
 ![DT](./assets/dt.png)
 
@@ -64,6 +71,14 @@ Following datasets are supported:
 
 A CNN-based Autoencoder is trained on the chromatin images while a fully-connected one is trained on the RNA-seq data.
 
+Data and pre-trained models are zipped and attached in the Github release. 
+You can download the data (and the models if you would like) 
+from : [Github release](https://github.com/talipucar/PyFlow_DomainTranslation/releases) 
+
+Once downloaded, unzip the data, and place it under the main project directory. 
+Unzipped model should be placed under **"./results/training/ae/"**
+
+
 # Environment - Installation
 It requires Python 3.8. You can set up the environment by following three steps:
 1. Install pipenv using pip
@@ -85,11 +100,12 @@ II) The pre-trained CNN-based AE is loaded, and a fully-connected AE is initiali
 classifier. The fully-connected AE is trained in either adversarial, or cross-entropy loss, during which its latent 
 space is aligned with that of CNN-based AE.
 
-Commands for afromentioned two steps as well as for evaluation after training:
+Commands for aforementioned two steps as well as for evaluation after training:
 ```
-I)   python 0_train_ae.py
-II)  python 1_train_joint.py
-III) python 2_eval.py
+  I) python 0_train_ae.py      # Train autoencoder using the chromatin images
+ II) python 1_train_joint.py   # Joint training of a second autoencoder using RNA-seq data together 
+                               # with pre-trained Image autoencoder in (I) to align two domains.
+III) python 2_eval.py          # Evaluations to test how aligned two domains are.
 ```
 
 # Evaluation
@@ -183,11 +199,36 @@ Image data &#x27F9; Image Encoder &#x27F9; RNA Decoder &#x27F9; RNA Encoder &#x2
 
 ![IMG_RNA](./assets/bothDomains_inRNALatentSpace.png)
 Figure-3: The samples from RNA and Image domain are shown in the latent space of RNA Autoencoder. Legends (0,1) correspond 
-to two clusters in the Image domain, and (2, 3) are for the ones in the RNA domain. Mapping of clusters are: 0 &#x27F9; 2, 1 &#x27F9; 3
+to two clusters in the Image domain, and (2, 3) are for the ones in the RNA domain. 
+Mapping of clusters are: 0 &#x27F9; 2, 1 &#x27F9; 3
 
 # Experiment tracking
 MLFlow can be used to track experiments. It is turned off by default, but can be turned on by changing option in 
 runtime config file in "./config/runtime.yaml"
+
+#Summary
+1) Data and pre-trained models are zipped and attached in the Github release. 
+After cloning the project, download the data (and the models if you would like) 
+from : [Github release](https://github.com/talipucar/PyFlow_DomainTranslation/releases) 
+
+Once downloaded, unzip the data, and place it under the main project directory. 
+Unzipped model should be placed under "./results/training/ae/"
+
+
+2) Installation of required packages:
+```
+pip install pipenv          # To install pipenv if you don't have it already
+pipenv shell                # To activate virtual env
+pipenv install --skip-lock  # To install required packages. 
+```
+
+3) Training and evaluation of the models:
+```
+  I) python 0_train_ae.py      # Train autoencoder using the chromatin images
+ II) python 1_train_joint.py   # Joint training of a second autoencoder using RNA-seq data together 
+                               # with pre-trained Image autoencoder in (I) to align two domains.
+III) python 2_eval.py          # Evaluations to test how aligned two domains are.
+```
 
 # Citing this repo
 If you use this work in your own studies, and work, please don't forget to cite the original source.

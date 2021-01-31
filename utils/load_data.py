@@ -4,8 +4,17 @@ Email: ucabtuc@gmail.com
 Version: 0.1
 Description: Data loader for images and RNA data.
 
-Credit: The most classes and functions are taken from the following source with no, or little modification:
-https://github.com/uhlerlab/cross-modal-autoencoders
+----------------------------------
+Credit: Following classes / functions are obtained with no, or little modification from
+https://github.com/uhlerlab/cross-modal-autoencoders :
+
+NucleiDataset
+RNADataset
+ToTensorNormalize()
+print_nuclei_names()
+test_nuclei_dataset()
+test_rna_loader()
+----------------------------------
 """
 
 import os
@@ -18,9 +27,18 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
 
-
 class Loader(object):
+    """
+    Author: Talip Ucar
+    Email: ucabtuc@gmail.com
+    """
     def __init__(self, config, dataset_name, eval_mode=False, kwargs={}):
+        """
+        :param dict config: Configuration dictionary.
+        :param str dataset_name: Name of the dataset to use.
+        :param bool eval_mode: Whether the dataset is used for evaluation. False by default.
+        :param dict kwargs: Additional parameters if needed.
+        """
         # Get batch size
         batch_size = config["batch_size"]
         # Get config
@@ -42,7 +60,7 @@ class Loader(object):
         # Get dataset
         dataset = loader_map[dataset_name]
         # Transformation for training dataset. If we are evaluating the model, use ToTensorNormalize.
-        train_transform = ToTensorNormalize() #if eval_mode else DataTransforms()
+        train_transform = ToTensorNormalize()
         # Training and Validation datasets
         train_dataset = dataset(datadir=file_path, mode='train', transform=train_transform)
         # Test dataset
@@ -140,31 +158,6 @@ class NucleiDataset(Dataset):
         return sample
 
 
-class ATAC_Dataset(Dataset):
-    def __init__(self, datadir):
-        self.datadir = datadir
-        self.atac_data, self.labels = self._load_atac_data()
-
-    def __len__(self):
-        return len(self.atac_data)
-
-    def __getitem__(self, idx):
-        atac_sample = self.atac_data[idx]
-        cluster = self.labels[idx]
-        return {'tensor': torch.from_numpy(atac_sample).float(), 'binary_label': int(cluster)}
-
-    def _load_atac_data(self):
-        data = pd.read_csv(os.path.join(self.datadir, "df_peak_counts_names_nCD4_seuratnorm.csv"), index_col=0)
-        data = data.transpose()
-        labels = pd.read_csv(os.path.join(self.datadir, "clustlabels_peak_counts_names_nCD4_seurat_n_2.csv"),
-                             index_col=0)
-
-        data = labels.merge(data, left_index=True, right_index=True)
-        data = data.values
-
-        return data[:, 1:], data[:, 0]
-
-
 class RNADataset(Dataset):
     def __init__(self, datadir, mode='train', transform=ToTensorNormalize()):
         self.datadir = datadir
@@ -210,17 +203,6 @@ def test_nuclei_dataset():
     for sample in dataset:
         labels += sample['binary_label']
     print(labels)
-
-
-def test_atac_loader():
-    dataset = ATAC_Dataset(datadir="data/atac_seq_data")
-    print(len(dataset))
-    sample = dataset[0]
-    print(torch.max(sample['tensor']))
-    print(sample['tensor'].shape)
-    for k in sample.keys():
-        print(k)
-        print(sample[k])
 
 
 def test_rna_loader():

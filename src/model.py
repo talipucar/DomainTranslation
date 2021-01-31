@@ -3,6 +3,13 @@ Author: Talip Ucar
 Email: ucabtuc@gmail.com
 Version: 0.1
 Description: Class to train an Autoencoder using the chromatin images.
+
+A custom CNN-based Autoencoder model is used to learn representation from images.
+Its architecture is defined in yaml file of the model ("./config/ae.yaml").
+
+Note that the class is flexible to define Autoencoder with either CNN-based architecture, or fully-connected one,
+depending on the type of modality that is being trained on. To switch to fully-connected architecture,
+you can do so by changing "convolution" option in "./config/ae.yaml" i.e. convolution = false
 """
 
 import os
@@ -23,8 +30,21 @@ th.autograd.set_detect_anomaly(True)
 
 class AEModel:
     """
-    Model:
-    Loss function:
+    Model: Consists of an Autoencoder together with either Discriminator, or Classifier.
+    Loss function: Reconstruction loss of untrained Autoencoder + Cross-entropy loss
+        (Cross-entropy loss is used if supervised=true in "./config/ae.yaml" file).
+    ------------------------------------------------------------
+    Architecture:  Encoder -> Decoder
+                           -> (Optional) Discriminator, or Classifier
+    ------------------------------------------------------------
+    Autoencoder can be configured as
+                        - Autoencoder (ae),
+                        - Variational autoencoder (vae),
+                        - Beta-VAE (bvae),
+                        - Adversarial autoencoder (aae).
+    ------------------------------------------------------------
+    By default, the training is done by using supervised learning (cross-entropy loss). To make it fully unsupervised,
+    change "supervised: true" to "supervised: false" in "./config/ae.yaml".
     """
 
     def __init__(self, options):
@@ -47,9 +67,9 @@ class AEModel:
         # Instantiate and set up Classifier if "supervised" i.e. loss, optimizer, device (GPU, or CPU)
         self.set_classifier() if self.options["supervised"] else None
         # Set scheduler (its use is optional)
-        self.set_scheduler()
+        self._set_scheduler()
         # Set paths for results and Initialize some arrays to collect data during training
-        self.set_paths()
+        self._set_paths()
         # Print out model architecture
         self.get_model_summary()
 
@@ -150,7 +170,7 @@ class AEModel:
                 # Record KL loss if we are using variational inference
                 self.loss["kl_loss"] += [kl_loss.item()] if self.options["model_mode"] in ["vae", "bvae", "mvae"] else []
                 # Update Autoencoder params
-                self.update_model(total_loss, self.optimizer_ae, retain_graph=True)
+                self._update_model(total_loss, self.optimizer_ae, retain_graph=True)
                 # Update generator (Encoder) and discriminator if we are using Adversarial AE
                 if self.options["model_mode"] == "aae":
                     disc_loss, gen_loss = self.update_generator_discriminator(Xbatch)
@@ -170,7 +190,7 @@ class AEModel:
                     # Record accuracy
                     self.acc["acc_b"].append((th.argmax(preds, dim=1) == labels).float().mean())
                     # Update Classifier params
-                    self.update_model(xloss, self.optimizer_cl, retain_graph=False)
+                    self._update_model(xloss, self.optimizer_cl, retain_graph=False)
                     # Clean-up for efficient memory use.
                     del xloss, preds
                 # Update log message using epoch and batch numbers
@@ -193,16 +213,6 @@ class AEModel:
         # Save loss dataframe as csv file for later use
         loss_df.to_csv(self._loss_path + "/losses.csv")
         return self.loss
-
-    def tune(self, data_loader):
-        """
-        :return: None
-        Continues training of previously pre-trained model
-        """
-        self.load_models()
-        self.fit(data_loader)
-        self.save_weights()
-        print("Done with tuning the model.")
 
     def update_log(self, epoch, batch):
         # For the first epoch, add losses for batches since we still don't have loss for the epoch
@@ -238,23 +248,7 @@ class AEModel:
 
         data2 = b + eps
         data2 = th.from_numpy(data2).float()
-        return data2  # th.normal(0, 1, size=(self.options["batch_size"], self.options["dims"][-1]))
-
-    def process_batch(self, Xbatch):
-        # Convert the batch to tensor and move it to where the model is
-        Xbatch = Xbatch['tensor']
-        # Return batches
-        return Xbatch
-
-    def get_validation_batch(self, data_loader):
-        # Validation dataset
-        validation_loader = data_loader.test_loader
-        # Use only the first batch of validation set to save from computation
-        ((xi, xj), _) = next(iter(validation_loader))
-        # Concatenate xi, and xj, and turn it into a tensor
-        Xval = self.process_batch(xi, xj)
-        # Return
-        return Xval
+        return data2  
 
     def validate(self, validation_loader):
         with th.no_grad():
@@ -374,7 +368,7 @@ class AEModel:
         # Print model architecture
         print(description)
 
-    def update_model(self, loss, optimizer, retain_graph=True):
+    def _update_model(self, loss, optimizer, retain_graph=True):
         # Reset optimizer
         optimizer.zero_grad()
         # Backward propagation to compute gradients
@@ -382,11 +376,11 @@ class AEModel:
         # Update weights
         optimizer.step()
 
-    def set_scheduler(self):
+    def _set_scheduler(self):
         # Set scheduler (Its use will be optional)
         self.scheduler = th.optim.lr_scheduler.StepLR(self.optimizer_ae, step_size=2, gamma=0.99)
 
-    def set_paths(self):
+    def _set_paths(self):
         """ Sets paths to bse used for saving results at the end of the training"""
         # Top results directory
         self._results_path = self.options["paths"]["results"]
