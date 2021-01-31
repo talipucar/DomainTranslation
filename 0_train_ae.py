@@ -34,11 +34,7 @@ def train(config, data_loader, save_weights=True):
     # Start the clock to measure the training time
     start = time.process_time()
     # Fit the model to the data
-    if config["tune_model"]:
-        print("Tuning pre-trained model with further training.")
-        model.tune(data_loader)
-    else:
-        model.fit(data_loader)
+    model.fit(data_loader)
     # Total time spent on training
     training_time = time.process_time() - start
     # Report the training time
