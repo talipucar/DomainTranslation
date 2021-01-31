@@ -124,8 +124,7 @@ class DTModel:
         # Cross-entropy loss
         self.xloss = th.nn.CrossEntropyLoss(weight=self.ce_weights, reduction='mean')
         # Set optimizer for classifier
-        self.optimizer_cl = self._adam([self.classifier_dt.parameters(), self.autoencoder_rna.encoder.parameters()],
-                                       lr=self.options["learning_rate"])
+        self.optimizer_cl = self._adam([self.classifier_dt.parameters(), self.autoencoder_rna.encoder.parameters()], lr=self.options["learning_rate"])
         # Add items to summary to be used for reporting later
         self.summary.update({"class_train_acc": [], "class_test_acc": []})
 
@@ -168,8 +167,7 @@ class DTModel:
         # Training and Validation set for RNA dataset
         train_loader_rna, validation_loader_rna = rna_loader.train_loader, rna_loader.test_loader
         # Placeholders for record batch losses
-        self.loss = {"rloss_b": [], "kl_loss": [], "closs_b": [], "rloss_e": [], "closs_e": [], "vloss_e": [],
-                     "aae_loss": []}
+        self.loss = {"rloss_b": [], "kl_loss": [], "closs_b": [], "rloss_e": [], "closs_e": [], "vloss_e": [], "aae_loss": []}
         # Placeholder for classifier accuracy
         self.acc = {"acc_e": [], "acc_b": []}
         # Turn on training mode for each model.
@@ -189,8 +187,7 @@ class DTModel:
                 # Process the batch i.e. turning it into a tensor
                 Ximg, Xrna = img_dict['tensor'].to(self.device), rna_dict['tensor'].to(self.device)
                 # Get labels
-                labels_img, labels_rna = img_dict["binary_label"].to(self.device), rna_dict["binary_label"].to(
-                    self.device)
+                labels_img, labels_rna = img_dict["binary_label"].to(self.device), rna_dict["binary_label"].to(self.device)
                 # Forward pass on Img Autoencoder
                 with th.no_grad():
                     _, latent_img, _, _ = self.autoencoder(Ximg)
@@ -208,8 +205,7 @@ class DTModel:
                 self._update_model(total_loss, self.optimizer_rna, retain_graph=True)
                 # Update generator (Encoder) and discriminator if we are using Adversarial AE
                 if self.options["joint_training_mode"] == "aae":
-                    disc_loss, gen_loss = self.update_generator_discriminator(
-                        [latent_img, Xrna, labels_img, labels_rna])
+                    disc_loss, gen_loss = self.update_generator_discriminator([latent_img, Xrna, labels_img, labels_rna])
                     self.loss["aae_loss"].append([disc_loss, gen_loss])
                     del disc_loss, gen_loss
                 # Update Classifier if it is being used
@@ -404,11 +400,11 @@ class DTModel:
         if self.options["supervised"]:
             description += f"{30 * '='} Classifier {30 * '='}\n"
             description += f"{self.classifier_dt}\n"
-            # Summary of Discriminator if the model is based on Adversarial AE
+        # Summary of Discriminator if the model is based on Adversarial AE
         if self.options["joint_training_mode"] == "aae":
             description += f"{30 * '='} Discriminator {30 * '='}\n"
             description += f"{self.discriminator}\n"
-            # Print model architecture
+        # Print model architecture
         print(description)
 
     def _update_model(self, loss, optimizer, retain_graph=True):
