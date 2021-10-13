@@ -3,12 +3,12 @@
 
 Pytorch implementation of "Multi-domain translation between single-cell imaging and sequencing data using 
 autoencoders" (https://www.nature.com/articles/s41467-020-20249-2) with custom models. 
-Two autoencoders are trained to learn a shared latent representation between two modalities (Chromatin Images and 
+Two autoencoders are trained to learn a shared latent representation between two modalities (i.e. Chromatin Images and 
 Single-cell RNA sequence). 
 
 Each autoencoder is trained to learn representation of one modality while either a Discriminator with adversarial loss, 
 or a classifier with cross-entropy loss is trained on the samples in the latent space to align the latent representations 
-of two modalities. This results in learning a common latent representation for both modalities. 
+of two modalities. This results in learning a common latent representation for both modalities.
 
 Once trained, we can translate data from one domain to another, or fill in the missing data in one modality 
 by using the available data in another.
